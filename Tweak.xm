@@ -11,11 +11,10 @@ NSString *PSWebhookUrl = [PSPref objectForKey:@"webhookUrl"];
 NSString *PSChannel = [PSPref objectForKey:@"channel"];
 BOOL PSEnable = (! [PSPref.allKeys containsObject:@"enable"] || PSWebhookUrl == nil || PSChannel == nil) ? NO : (PSPref[@"enable"] ? YES : NO);
 
+%group PSHook
 %hook BBServer
 - (void)_publishBulletinRequest:(BBBulletin*)bulletin forSectionID:(id)arg2 forDestinations:(unsigned long long)arg3 alwaysToLockScreen:(bool)arg4
 {
-	%orig;
-
 	if (PSEnable) {
 		SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:bulletin.sectionID];
 		NSString *title = bulletin.title ? [NSString stringWithFormat:@"%@ [%@]", bulletin.title, app.displayName] : app.displayName;
@@ -47,5 +46,12 @@ BOOL PSEnable = (! [PSPref.allKeys containsObject:@"enable"] || PSWebhookUrl == 
 			NSLog(@"[PushSlacker] Error occured. Detail: %@", exception);
 		}
 	}
+
+	return %orig;
 }
 %end
+%end
+
+%ctor {
+	%init(PSHook);
+}
