@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>title</key>
+	<string>PushSlacker</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Enable PushSlacker</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>key</key>
+			<string>enable</string>
+			<key>label</key>
+			<string>Enable</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Options</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string></string>
+			<key>key</key>
+			<string>webhookUrl</string>
+			<key>prompt</key>
+			<string>Incoming Webhook URL: </string>
+			<key>placeholder</key>
+			<string>https://hooks.slack.com/services/***/***/***</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>#ios</string>
+			<key>key</key>
+			<string>channel</string>
+			<key>prompt</key>
+			<string>Slack Channel: </string>
+			<key>placeholder</key>
+			<string>#ios</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Respring </string>
+			<key>action</key>
+			<string>kill</string>
+		</dict>
+	</array>
+</dict>
+</plist>
