@@ -1,8 +1,8 @@
 # PushSlacker
-Foward any iOS Push Notifications to your Slack channel.
+Forward any iOS Push Notifications to your Slack channel.
 
 ## Config
-I've not prepared for PreferenceLoader so this tweak does NOT appear in Settings.app.
+I've not prepared for PreferenceLoader yet so this tweak does NOT appear in Settings.app.
 Please setup manually.
 
 `/User/Library/Preferences/jp.nephy.pushslacker.plist`
