@@ -1,0 +1,9 @@
+Package: jp.nephy.pushslacker
+Name: PushSlacker
+Depends: mobilesubstrate, preferenceloader
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Push any notifications to your Slack channel.
+Maintainer: Slash Nephy <mail@nephy.jp>
+Author: Slash Nephy <mail@nephy.jp>
+Section: Tweaks
