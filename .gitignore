@@ -1,0 +1,6 @@
+.theos/
+
+obj/
+packages/
+
+src/test/*
