@@ -7,12 +7,14 @@ NSDictionary *PSPref;
 NSString *PSWebhookUrl;
 NSString *PSChannel;
 NSString *PSDeviceName;
+BOOL PSIgnoreSlackNotification;
 
 static void loadPSPref() {
 	PSPref = [[NSDictionary alloc] initWithContentsOfFile:@"/private/var/mobile/Library/Preferences/jp.nephy.pushslacker.plist"];
 
 	PSWebhookUrl = [PSPref objectForKey:@"webhookUrl"];
 	PSChannel = [PSPref objectForKey:@"channel"];
+	PSIgnoreSlackNotification = [PSPref.allKeys containsObject:@"ignoreSlack"] && PSPref[@"ignoreSlack"] ? YES : NO;
 	if (! [PSPref.allKeys containsObject:@"enable"] || PSWebhookUrl == nil || PSChannel == nil) {
 		PSEnable = NO;
 	} else if (PSPref[@"enable"]) {
@@ -22,7 +24,7 @@ static void loadPSPref() {
 	}
 
 	UIDevice *currentDevice = UIDevice.currentDevice;
-	PSDeviceName = [NSString stringWithFormat:@"%@, iOS %@", currentDevice.model, currentDevice.systemVersion];
+	PSDeviceName = [NSString stringWithFormat:@"%@, %@ %@", currentDevice.name, currentDevice.systemName, currentDevice.systemVersion];
 }
 
 %group PSHook
@@ -31,6 +33,10 @@ static void loadPSPref() {
 	%orig;
 
 	@try {
+		if (PSIgnoreSlackNotification && [bulletin.sectionID isEqual:@"com.tinyspeck.chatlyio"]) {
+			return;
+		}
+
 		SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:bulletin.sectionID];
 		NSString *title = bulletin.title ? [NSString stringWithFormat:@"%@ [%@]", bulletin.title, app.displayName] : app.displayName;
 		NSString *message = bulletin.subtitle ? [NSString stringWithFormat:@"%@\n%@", bulletin.subtitle, bulletin.message] : bulletin.message;
