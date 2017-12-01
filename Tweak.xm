@@ -35,19 +35,19 @@ static void loadPSPref() {
 - (void) _publishBulletinRequest:(BBBulletin*)bulletin forSectionID:(id)arg2 forDestinations:(unsigned long long)arg3 alwaysToLockScreen:(bool)arg4 {
 	%orig;
 
-	@try {
-		NSString *bundleID = bulletin.sectionID;
-		if (PSIgnoreSlackNotification && [bundleID isEqual:@"com.tinyspeck.chatlyio"]) {
-			return;
-		}
+	[[[NSOperationQueue alloc] init] addOperationWithBlock:^{
+		@try {
+			NSString *bundleID = bulletin.sectionID;
+			if (PSIgnoreSlackNotification && [bundleID isEqual:@"com.tinyspeck.chatlyio"]) {
+				return;
+			}
 
-		SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:bundleID];
+			SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:bundleID];
 
-		NSString *title = bulletin.title && ! [bulletin.title isEqual:@""] && ! [bulletin.title isEqual:app.displayName] ? [NSString stringWithFormat:@"%@ [%@]", bulletin.title, app.displayName] : app.displayName;
-		NSString *message = bulletin.subtitle ? [NSString stringWithFormat:@"%@\n%@", bulletin.subtitle, bulletin.message] : bulletin.message;
+			NSString *title = bulletin.title && ! [bulletin.title isEqual:@""] && ! [bulletin.title isEqual:app.displayName] ? [NSString stringWithFormat:@"%@ [%@]", bulletin.title, app.displayName] : app.displayName;
+			NSString *message = bulletin.subtitle ? [NSString stringWithFormat:@"%@\n%@", bulletin.subtitle, bulletin.message] : bulletin.message;
 
-		if (! [PSIconCache.allKeys containsObject:bundleID]) {
-			@try {
+			if (! [PSIconCache.allKeys containsObject:bundleID]) {
 				NSURL *storeUrl = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/JP/lookup?bundleId=%@", bundleID]];
 				NSData *storeJsonData = [NSData dataWithContentsOfURL:storeUrl];
 
@@ -60,36 +60,33 @@ static void loadPSPref() {
 					[PSIconCache setObject:[NSNull null] forKey:bundleID];
 				}
 			}
-			@catch (NSException *exception) {
-				NSLog(@"[PushSlacker] Error occured. Detail: %@", exception);
+
+			NSMutableDictionary *payload = [NSMutableDictionary dictionary];
+			[payload setObject:PSChannel forKey:@"channel"];
+			[payload setObject:[NSString stringWithFormat:@"%@ (%@)", title, PSDeviceName] forKey:@"username"];
+			[payload setObject:message forKey:@"text"];
+
+			if ([PSIconCache.allKeys containsObject:bundleID] && PSIconCache[bundleID]) {
+				[payload setObject:PSIconCache[bundleID] forKey:@"icon_url"];
 			}
+
+			NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+
+			NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+			NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+			NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:PSWebhookUrl];
+			[request setHTTPMethod:@"POST"];
+			[request addValue:@"application/json; charset=UTF-8" forHTTPHeaderField:@"Content-Type"];
+			[request setHTTPBody:jsonData];
+
+			NSURLSessionDataTask *postDataTask = [session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {}];
+
+			[postDataTask resume];
 		}
-
-		NSMutableDictionary *payload = [NSMutableDictionary dictionary];
-		[payload setObject:PSChannel forKey:@"channel"];
-		[payload setObject:[NSString stringWithFormat:@"%@ (%@)", title, PSDeviceName] forKey:@"username"];
-		[payload setObject:message forKey:@"text"];
-
-		if ([PSIconCache.allKeys containsObject:bundleID] && PSIconCache[bundleID]) {
-			[payload setObject:PSIconCache[bundleID] forKey:@"icon_url"];
+		@catch (NSException *exception) {
+			NSLog(@"[PushSlacker] Error occured. Detail: %@", exception);
 		}
-
-		NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
-
-		NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
-		NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
-		NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:PSWebhookUrl];
-		[request setHTTPMethod:@"POST"];
-		[request addValue:@"application/json; charset=UTF-8" forHTTPHeaderField:@"Content-Type"];
-		[request setHTTPBody:jsonData];
-
-		NSURLSessionDataTask *postDataTask = [session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {}];
-
-		[postDataTask resume];
-	}
-	@catch (NSException *exception) {
-		NSLog(@"[PushSlacker] Error occured. Detail: %@", exception);
-	}
+    }];
 }
 %end
 %end
