@@ -1,4 +1,3 @@
-#import <Foundation/NSTask.h>
 #import <Preferences/PSSpecifier.h>
 #import <Preferences/PSListController.h>
 

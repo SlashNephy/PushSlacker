@@ -1,10 +1,9 @@
-ARCHS = armv7 armv7s arm64
-TARGET = iphone::10.2:9.0
+ARCHS = arm64
 
 include $(THEOS)/makefiles/common.mk
 
 BUNDLE_NAME = PushSlacker
-PushSlacker_FILES = PushSlackerController.m
+PushSlacker_FILES = PushSlackerPreferenceController.m
 PushSlacker_INSTALL_PATH = /Library/PreferenceBundles
 PushSlacker_FRAMEWORKS = UIKit Foundation
 PushSlacker_PRIVATE_FRAMEWORKS = Preferences
