@@ -15,64 +15,60 @@ inline NSString* getPrefString(NSString *key) {
 }
 
 static NSString* lookupBundle(NSString *bundleId) {
-    @autoreleasepool {
-        @try {
-            NSURL *storeUrl = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/JP/lookup?bundleId=%@", bundleId]];
-            NSData *storeJsonData = [NSData dataWithContentsOfURL:storeUrl];
-            NSDictionary *storeJson = [NSJSONSerialization JSONObjectWithData:storeJsonData options:0 error:nil];
+    @try {
+        NSURL *storeUrl = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/JP/lookup?bundleId=%@", bundleId]];
+        NSData *storeJsonData = [NSData dataWithContentsOfURL:storeUrl];
+        NSDictionary *storeJson = [NSJSONSerialization JSONObjectWithData:storeJsonData options:0 error:nil];
 
-            NSArray *results = [storeJson objectForKey:@"results"];
-            if (results != nil && results.count > 0) {
-                NSDictionary *result = [results objectAtIndex:0];
+        NSArray *results = [storeJson objectForKey:@"results"];
+        if (results != nil && results.count > 0) {
+            NSDictionary *result = [results objectAtIndex:0];
 
-                return [result objectForKey:@"artworkUrl60"];
-            }
+            return [result objectForKey:@"artworkUrl60"];
         }
-        @catch (NSException *exception) {
-            NSLog(@"[PushSlacker] Error: %@", exception);
-        }
-
-        return nil;
     }
+    @catch (NSException *exception) {
+        NSLog(@"[PushSlacker] Error: %@", exception);
+    }
+
+    return nil;
 }
 
 static void sendSlackMessage(NSString *text, NSString *username, NSString *iconUrl) {
-    @autoreleasepool {
-        NSMutableDictionary *payload = [NSMutableDictionary dictionary];
+    NSMutableDictionary *payload = [NSMutableDictionary dictionary];
 
-        [payload setObject:text forKey:@"text"];
-        [payload setObject:username forKey:@"username"];
-        if (iconUrl != nil) {
-            [payload setObject:iconUrl forKey:@"icon_url"];
-        } else {
-            [payload setObject:@":desktop_computer:" forKey:@"icon_emoji"];
-        }
-
-        NSString *PSChannel = getPrefString(@"channel");
-        if (PSChannel == nil) {
-            return;
-        }
-
-        [payload setObject:PSChannel forKey:@"channel"];
-
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
-
-        NSString *PSUrl = getPrefString(@"url");
-        if (PSUrl == nil) {
-            return;
-        }
-
-        NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
-        [request setHTTPMethod:@"POST"];
-        [request setURL:[NSURL URLWithString:PSUrl]];
-        [request addValue:@"application/json; charset=UTF-8" forHTTPHeaderField:@"Content-Type"];
-        [request setHTTPBody:jsonData];
-
-        NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
-        NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
-        NSURLSessionDataTask *task = [session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {}];
-        [task resume];
+    [payload setObject:text forKey:@"text"];
+    [payload setObject:username forKey:@"username"];
+    if (iconUrl != nil) {
+        [payload setObject:iconUrl forKey:@"icon_url"];
+    } else {
+        [payload setObject:@":desktop_computer:" forKey:@"icon_emoji"];
     }
+
+    NSString *PSChannel = getPrefString(@"channel");
+    if (PSChannel == nil) {
+        return;
+    }
+
+    [payload setObject:PSChannel forKey:@"channel"];
+
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+
+    NSString *PSUrl = getPrefString(@"url");
+    if (PSUrl == nil) {
+        return;
+    }
+
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
+    [request setHTTPMethod:@"POST"];
+    [request setURL:[NSURL URLWithString:PSUrl]];
+    [request addValue:@"application/json; charset=UTF-8" forHTTPHeaderField:@"Content-Type"];
+    [request setHTTPBody:jsonData];
+
+    NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {}];
+    [task resume];
 }
 
 %group Hook
