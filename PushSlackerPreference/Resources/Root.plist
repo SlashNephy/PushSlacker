@@ -17,6 +17,8 @@
 			<string>PSSwitchCell</string>
 			<key>default</key>
 			<false/>
+			<key>defaults</key>
+			<string>jp.nephy.pushslacker</string>
 			<key>key</key>
 			<string>enable</string>
 			<key>label</key>
@@ -33,10 +35,12 @@
 			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string></string>
+			<key>defaults</key>
+			<string>jp.nephy.pushslacker</string>
 			<key>key</key>
-			<string>webhookUrl</string>
-			<key>prompt</key>
-			<string>Incoming Webhook URL: </string>
+			<string>url</string>
+			<key>label</key>
+			<string>Webhook URL</string>
 			<key>placeholder</key>
 			<string>https://hooks.slack.com/services/***/***/***</string>
 		</dict>
@@ -45,20 +49,26 @@
 			<string>PSEditTextCell</string>
 			<key>default</key>
 			<string>#ios</string>
+			<key>defaults</key>
+			<string>jp.nephy.pushslacker</string>
 			<key>key</key>
 			<string>channel</string>
-			<key>prompt</key>
-			<string>Slack Channel: </string>
+			<key>label</key>
+			<string>Channel</string>
 			<key>placeholder</key>
 			<string>#ios</string>
 		</dict>
 		<dict>
 			<key>cell</key>
-			<string>PSButtonCell</string>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>jp.nephy.pushslacker</string>
+			<key>key</key>
+			<string>ignoreSlack</string>
 			<key>label</key>
-			<string>Respring </string>
-			<key>action</key>
-			<string>kill</string>
+			<string>Ignore notifications from Slack</string>
 		</dict>
 	</array>
 </dict>
