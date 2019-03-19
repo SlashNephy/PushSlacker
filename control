@@ -1,9 +1,11 @@
-Package: jp.nephy.pushslacker
-Name: PushSlacker
-Depends: mobilesubstrate, preferenceloader
-Version: 0.0.2
-Architecture: iphoneos-arm
-Description: [iOS 11] Forward any notifications to your Slack channel.
-Maintainer: Slash Nephy <slash@nephy.jp>
 Author: Slash Nephy <slash@nephy.jp>
+Maintainer: Slash Nephy <slash@nephy.jp>
+Name: PushSlacker
+Package: jp.nephy.pushslacker
+Depends: mobilesubstrate, preferenceloader
 Section: Tweaks
+Version: 0.0.3
+Architecture: iphoneos-arm
+Description: [iOS 11-12] Forward notifications to your Slack channel.
+Homepage: https://github.com/SlashNephy/PushSlacker
+Tag: purpose::extension
