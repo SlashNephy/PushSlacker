@@ -1,88 +1,137 @@
 #import <BulletinBoard/BBBulletin.h>
-#import <BulletinBoard/BBBulletinRequest.h>
 #import <SpringBoard/SBApplication.h>
 #import <SpringBoard/SBApplicationController.h>
 
-NSString *PSUrl;
-NSString *PSChannel;
-BOOL PSIgnoreSlackNotification;
+NSMutableDictionary *PSIconUrlCache;
 
-// NSMutableDictionary *PSIconUrlCache;
-NSOperationQueue *PSQueue;
+#define PLIST_PATH @"/private/var/mobile/Library/Preferences/jp.nephy.pushslacker.plist"
+
+inline bool getPrefBool(NSString *key) {
+	return [[[NSDictionary dictionaryWithContentsOfFile:PLIST_PATH] valueForKey:key] boolValue];
+}
+
+inline NSString* getPrefString(NSString *key) {
+	return [[[NSDictionary dictionaryWithContentsOfFile:PLIST_PATH] valueForKey:key] stringValue];
+}
+
+static NSString* lookupBundle(NSString *bundleId) {
+    @autoreleasepool {
+        @try {
+            NSURL *storeUrl = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/JP/lookup?bundleId=%@", bundleId]];
+            NSData *storeJsonData = [NSData dataWithContentsOfURL:storeUrl];
+            NSDictionary *storeJson = [NSJSONSerialization JSONObjectWithData:storeJsonData options:0 error:nil];
+
+            NSArray *results = [storeJson objectForKey:@"results"];
+            if (results != nil && results.count > 0) {
+                NSDictionary *result = [results objectAtIndex:0];
+
+                return [result objectForKey:@"artworkUrl60"];
+            }
+        }
+        @catch (NSException *exception) {
+            NSLog(@"[PushSlacker] Error: %@", exception);
+        }
+
+        return nil;
+    }
+}
+
+static void sendSlackMessage(NSString *text, NSString *username, NSString *iconUrl) {
+    @autoreleasepool {
+        NSMutableDictionary *payload = [NSMutableDictionary dictionary];
+
+        [payload setObject:text forKey:@"text"];
+        [payload setObject:username forKey:@"username"];
+        if (iconUrl != nil) {
+            [payload setObject:iconUrl forKey:@"icon_url"];
+        } else {
+            [payload setObject:@":desktop_computer:" forKey:@"icon_emoji"];
+        }
+
+        NSString *PSChannel = getPrefString(@"channel");
+        if (PSChannel == nil) {
+            return;
+        }
+
+        [payload setObject:PSChannel forKey:@"channel"];
+
+        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+
+        NSString *PSUrl = getPrefString(@"url");
+        if (PSUrl == nil) {
+            return;
+        }
+
+        NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
+        [request setHTTPMethod:@"POST"];
+        [request setURL:[NSURL URLWithString:PSUrl]];
+        [request addValue:@"application/json; charset=UTF-8" forHTTPHeaderField:@"Content-Type"];
+        [request setHTTPBody:jsonData];
+
+        NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+        NSURLSessionDataTask *task = [session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {}];
+        [task resume];
+    }
+}
 
 %group Hook
 %hook BBServer
-- (void) _publishBulletinRequest:(id)arg1 forSectionID:(id)arg2 forDestinations:(unsigned long long)arg3 alwaysToLockScreen:(bool)arg4 {
-    %orig;
+- (void)_publishBulletinRequest:(BBBulletin *)bulletin forSectionID:(NSString *)sectionID forDestinations:(unsigned long long)arg3 {
+	%orig;
 
-    if ([NSStringFromClass([arg1 class]) compare:@"BBBulletinRequest"] != NSOrderedSame || ! [arg2 isKindOfClass:[NSString class]]) {
-        %log;
+    if (!getPrefBool(@"enable")) {
         return;
     }
 
-    NSString *bundleID = (NSString *)arg2;
-    if (PSIgnoreSlackNotification && [bundleID compare:@"com.tinyspeck.chatlyio"] == NSOrderedSame) {
+    if (!sectionID) {
         return;
     }
 
-    [PSQueue addOperationWithBlock:^{
+    if ([sectionID compare:@"com.tinyspeck.chatlyio"] == NSOrderedSame && getPrefBool(@"ignoreSlack")) {
+        return;
+    }
+
+    [[[NSOperationQueue alloc] init] addOperationWithBlock:^{
         @try {
-            BBBulletinRequest *bulletin = (BBBulletinRequest *)arg1;
-            SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:bundleID];
+            NSString *title = bulletin.title;
+            NSString *subtitle = bulletin.subtitle;
+			NSString *message = bulletin.message;
+
+            NSMutableString *text = [NSMutableString string];
+            if (title) {
+                [text appendString:[NSString stringWithFormat:@"%@\n", title]];
+            }
+            if (subtitle) {
+                [text appendString:[NSString stringWithFormat:@"%@\n", subtitle]];
+            }
+            if (message) {
+                [text appendString:[NSString stringWithFormat:@"```\n%@\n```", message]];
+            }
+
+            SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:sectionID];
+            NSString *appName = app.displayName;
 
             UIDevice *currentDevice = UIDevice.currentDevice;
             NSString *deviceName = [NSString stringWithFormat:@"%@, %@ %@", currentDevice.name, currentDevice.systemName, currentDevice.systemVersion];
-            NSString *username = [NSString stringWithFormat:@"%@ [%@]", app.displayName, deviceName];
 
-            NSMutableString *text = [NSMutableString string];
-            if (bulletin.title) {
-                [text appendString:[NSString stringWithFormat:@"%@\n", bulletin.title]];
-            }
-            if (bulletin.subtitle) {
-                [text appendString:[NSString stringWithFormat:@"%@\n", bulletin.subtitle]];
-            }
-            [text appendString:[NSString stringWithFormat:@"```\n%@\n```", bulletin.message]];
-
-            NSString *iconUrl = nil;
-            // NSString *iconUrl = (NSString *)[PSIconUrlCache objectForKey:bundleID];
-            // if (iconUrl == nil) {
-                @try {
-                    NSURL *storeUrl = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/JP/lookup?bundleId=%@", bundleID]];
-                    NSData *storeJsonData = [NSData dataWithContentsOfURL:storeUrl];
-                    NSDictionary *storeJson = [NSJSONSerialization JSONObjectWithData:storeJsonData options:0 error:nil];
-            
-                    NSArray *results = [storeJson objectForKey:@"results"];
-                    if (results != nil && results.count > 0) {
-                        NSDictionary *result = [results objectAtIndex:0];
-                        iconUrl = [result objectForKey:@"artworkUrl60"];
-                        // [PSIconUrlCache setObject:iconUrl forKey:bundleID];
-                    }
-                }
-                @catch (NSException *exception) {}
-            // }
-
-            NSMutableDictionary *payload = [NSMutableDictionary dictionary];
-            [payload setObject:PSChannel forKey:@"channel"];
-            [payload setObject:username forKey:@"username"];
-            [payload setObject:text forKey:@"text"];
-            if (iconUrl != nil) {
-                [payload setObject:iconUrl forKey:@"icon_url"];
+            NSString *username;
+            if (appName) {
+                username = [NSString stringWithFormat:@"%@ [%@]", appName, deviceName];
             } else {
-                [payload setObject:@":desktop_computer:" forKey:@"icon_emoji"];
+                username = deviceName;
             }
 
-            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+            NSString *iconUrl = [PSIconUrlCache objectForKey:sectionID];
+            if (iconUrl == nil) {
+                iconUrl = lookupBundle(sectionID);
 
-            NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
-            [request setHTTPMethod:@"POST"];
-            [request setURL:[NSURL URLWithString:PSUrl]];
-            [request addValue:@"application/json; charset=UTF-8" forHTTPHeaderField:@"Content-Type"];
-            [request setHTTPBody:jsonData];
+                if (iconUrl != nil) {
+                    [PSIconUrlCache setObject:iconUrl forKey:sectionID];
+                }
+            }
 
-            NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
-            NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
-            NSURLSessionDataTask *task = [session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {}];
-            [task resume];
+            sendSlackMessage(text, username, iconUrl);
         }
         @catch (NSException *exception) {
             NSLog(@"[PushSlacker] Error: %@", exception);
@@ -93,17 +142,9 @@ NSOperationQueue *PSQueue;
 %end
 
 %ctor {
-    NSDictionary *PSPref = [[NSDictionary alloc] initWithContentsOfFile:@"/private/var/mobile/Library/Preferences/jp.nephy.pushslacker.plist"];
+    PSIconUrlCache = [NSMutableDictionary dictionary];
 
-    BOOL PSEnable = [PSPref objectForKey:@"enable"] ? YES : NO;
-    PSUrl = [PSPref objectForKey:@"url"];
-    PSChannel = [PSPref objectForKey:@"channel"];
-    PSIgnoreSlackNotification = [PSPref objectForKey:@"ignoreSlack"] ? YES : NO;
-
-    if (PSEnable && PSUrl != nil && PSChannel != nil) {
-        // PSIconUrlCache = [NSMutableDictionary dictionary];
-        PSQueue = [[NSOperationQueue alloc] init];
-
+    @autoreleasepool {
         %init(Hook);
     }
 }
