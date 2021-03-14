@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: macOS-latest
+    env:
+      THEOS: theos
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Prepare Cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          build
+          packages
+        key: ${{ runner.os }}-cache
+
+    - name: Install Theos Dependencies
+      run: brew install ldid xz
+    - name: Checkout Theos
+      uses: actions/checkout@v2
+      with:
+        repository: theos/theos
+        path: theos
+        submodules: recursive
+    - name: Delete theos/sdks
+      run: rm -rf theos/sdks
+    - name: Checkout SDKs
+      uses: actions/checkout@v2
+      with:
+        repository: theos/sdks
+        path: theos/sdks
+
+    - name: Build Package
+      run: make package
+
+    - name: Checkout cydia.starry.blue
+      uses: actions/checkout@v2
+      with:
+        repository: SlashNephy/cydia.starry.blue
+        path: cydia.starry.blue
+    - name: Push to cydia.starry.blue
+      working-directory: cydia.starry.blue
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+
+        cp ../packages ./packages
+        git add .
+        git commit -m "Release ${{ github.GITHUB_REPOSITORY }} ${{ github.ref }}"
+        git push
