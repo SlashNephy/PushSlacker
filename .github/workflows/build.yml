@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare Cache
       uses: actions/cache@v2
@@ -24,7 +24,7 @@ jobs:
     - name: Install Theos Dependencies
       run: brew install ldid xz
     - name: Checkout Theos
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: theos/theos
         path: theos
@@ -32,7 +32,7 @@ jobs:
     - name: Delete theos/sdks
       run: rm -rf theos/sdks
     - name: Checkout SDKs
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: theos/sdks
         path: theos/sdks
@@ -41,7 +41,7 @@ jobs:
       run: make package
 
     - name: Checkout cydia.starry.blue
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: SlashNephy/cydia.starry.blue
         path: cydia.starry.blue
